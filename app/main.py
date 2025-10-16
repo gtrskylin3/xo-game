@@ -5,25 +5,18 @@ from uvicorn import run
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from app.connection_manager import ConnectionManager
+
+
+connection_manager = ConnectionManager()
 
 app = FastAPI()
 
+
+
+
 templates = Jinja2Templates(directory='app/templates')
 
-class ConnectionManager:
-    def __init__(self):
-        self.connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.connections.append(websocket)
-    
-    async def disconnect(self, websocket: WebSocket):
-        self.connections.remove(websocket)
-
-    async def broadcast(self, message: str):
-        for connection in self.connections:
-            await connection.send_text(message)
 
 @app.get('/')
 def html_response(request: Request):
@@ -33,11 +26,12 @@ def html_response(request: Request):
 
 @app.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
+    await connection_manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text()
-            await websocket.send_text(data)
+            print(connection_manager.connections)
+            await connection_manager.broadcast(data)
     except WebSocketDisconnect as e:
         print(f'connection closed {e.code}')
 
