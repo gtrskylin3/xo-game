@@ -1,121 +1,359 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
   <head>
     <title>x0 game.</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
+      /* Import a modern font */
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+      :root {
+        /* Dark Theme (Default) */
+        --bg-color: #1a1a1a;
+        --board-bg: #2c2c2c;
+        --cell-bg: #3e3e3e;
+        --text-color: #f0f0f0;
+        --accent-color: #4a90e2;
+        --disabled-color: #777;
+        --shadow-color: rgba(0, 0, 0, 0.5);
+      }
+
+      body.light-theme {
+        /* Light Theme */
+        --bg-color: #f0f2f5;
+        --board-bg: #ffffff;
+        --cell-bg: #e9e9e9;
+        --text-color: #1a1a1a;
+        --accent-color: #0056b3;
+        --disabled-color: #aaaaaa;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Poppins', sans-serif;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 90vh;
+        min-height: 100vh;
+        margin: 0;
+        padding: 1rem;
+        text-align: center;
+        transition: background-color 0.3s, color 0.3s;
       }
-      
+
+      .theme-toggle-container {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+      }
+
+      #theme-toggle {
+        background: var(--cell-bg);
+        color: var(--text-color);
+        border: 1px solid var(--board-bg);
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+      }
+
+      #theme-toggle:hover {
+        background: var(--board-bg);
+      }
+
+      h1 {
+        font-size: 3em;
+        font-weight: 700;
+        margin: 1rem 0;
+        color: var(--accent-color);
+      }
+
+      .game-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 1rem;
+        width: 100%;
+        max-width: 500px;
+      }
+
+      #status {
+        font-size: 1.3em;
+        font-weight: 600;
+        min-height: 1.5em;
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+      }
+
+      #score-display {
+        font-size: 1.1em;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        color: var(--text-color);
+      }
+
+      #score-x, #score-o {
+        font-weight: 600;
+      }
+
       #board {
         display: grid;
-        /* Создаем 3 колонки, каждая занимает одинаковое пространство (1fr) */
-        grid-template-columns: repeat(3, 100px);
-        /* Создаем 3 ряда высотой 100px */
-        grid-template-rows: repeat(3, 100px);
-        gap: 5px; /* Пространство между кнопками */
-        margin-top: 20px;
+        width: 100%;
+        max-width: 500px;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        aspect-ratio: 1 / 1; /* Perfect square */
+        gap: 10px;
+        margin-top: 1rem;
+        background-color: var(--board-bg);
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px var(--shadow-color);
+        transition: background-color 0.3s, box-shadow 0.3s;
       }
-      
+
       #board button {
-        font-size: 3em; /* Делаем 'X' и 'O' большими */
-        font-weight: bold;
+        background-color: var(--cell-bg);
+        border: none;
+        border-radius: 10px;
+        font-size: 3.5em;
+        font-weight: 600;
         cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        color: var(--text-color);
+        line-height: 1;
+        padding: 0;
       }
-      
-      #status {
-        font-size: 1.2em;
-        height: 30px;
+
+      #board button:not(:disabled):hover {
+        background-color: #4f4f4f;
+        transform: scale(1.05);
+      }
+
+      body.light-theme #board button:not(:disabled):hover {
+        background-color: #dcdcdc;
+      }
+
+      #board button:disabled {
+        cursor: not-allowed;
+        color: var(--disabled-color);
+      }
+
+      /* Specific colors for X and O */
+      .x-marker {
+        color: #e74c3c !important; /* Red */
+      }
+
+      .o-marker {
+        color: #3498db !important; /* Blue */
+      }
+
+      /* Mobile Optimization */
+      @media (max-width: 600px) {
+        body {
+          padding: 0.5rem;
+        }
+
+        .theme-toggle-container {
+          top: 0.5rem;
+          right: 0.5rem;
+        }
+
+        h1 {
+          font-size: 2.2em;
+          margin: 0.8rem 0;
+        }
+
+        .game-info {
+          margin-bottom: 0.8rem;
+        }
+
+        #status {
+          font-size: 1.1em;
+        }
+
+        #score-display {
+          font-size: 0.9em;
+        }
+
+        #board {
+          gap: 8px;
+          padding: 10px;
+        }
+
+        #board button {
+          font-size: 3em;
+        }
+      }
+
+      @media (max-width: 400px) {
+        h1 {
+          font-size: 1.8em;
+        }
+
+        #board button {
+          font-size: 2.5em;
+        }
       }
     </style>
   </head>
   <body>
+    <div class="theme-toggle-container">
+      <button id="theme-toggle">☀️/🌙</button>
+    </div>
+
     <h1>Tic-Tac-Toe</h1>
-    <p id="status">Connection...</p>
-    <p id="score">Счет:</p>
-    <div id="board"></div>
+
+    <main>
+      <div class="game-info">
+        <p id="status">Connection...</p>
+        <div id="score-display">
+          <span id="score-x"></span>
+          <span id="score-separator">|</span>
+          <span id="score-o"></span>
+        </div>
+      </div>
+      <div id="board"></div>
+    </main>
+
     <script>
+      // --- THEME SWITCHER LOGIC ---
+      const themeToggle = document.getElementById('theme-toggle');
+      const body = document.body;
+
+      const applyTheme = (theme) => {
+        if (theme === 'light') {
+          body.classList.add('light-theme');
+          themeToggle.textContent = '🌙';
+        } else {
+          body.classList.remove('light-theme');
+          themeToggle.textContent = '☀️';
+        }
+      };
+
+      themeToggle.addEventListener('click', () => {
+        const newTheme = body.classList.contains('light-theme') ? 'dark' : 'light';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+      });
+
+      // Apply saved theme or detect OS preference on page load
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      if (savedTheme) {
+        applyTheme(savedTheme);
+      } else if (prefersDark) {
+        applyTheme('dark');
+      } else {
+        applyTheme('light');
+      }
+
+      // --- GAME LOGIC ---
       const statusEl = document.getElementById('status');
       const boardEl = document.getElementById('board');
-      const scoreEl = document.getElementById('score');
-      
-        let nickname = prompt("Пожалуйста, введите ваш никнейм:");
-        if (!nickname) {
-          nickname = "User" + Math.floor(Math.random() * 1000);
-        }
+      const scoreXEl = document.getElementById('score-x');
+      const scoreOEl = document.getElementById('score-o');
+      const scoreSeparatorEl = document.getElementById('score-separator');
+
+      let nickname = prompt("Пожалуйста, введите ваш никнейм:");
+      if (!nickname) {
+        nickname = "User" + Math.floor(Math.random() * 1000);
+      }
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      const ws = new WebSocket(`${protocol}//${host}/ws/${nickname}`); 
-      
-      let myRole = null
-      
+      const ws = new WebSocket(`${protocol}//${host}/ws/${nickname}`);
+
+      let myRole = null;
+
       function updateUI(state) {
+        // Update status message
         if (state.winner) {
           if (state.winner === 'draw') {
-            statusEl.textContent = 'Ничья'
+            statusEl.textContent = 'Ничья';
           } else {
-            const winner_nickname = state.players[state.winner]; 
-            statusEl.textContent = `Победил игрок ${winner_nickname}!`
-            const playerX_nick = state.players['X'] || 'Игрок X';
-            const playerO_nick = state.players['O'] || 'Игрок O';
-            scoreEl.textContent = `Счет: ${playerX_nick} ${state.score.X} | ${playerO_nick} ${state.score.O ? state.score.O: 0}`;
+            const winner_nickname = state.players[state.winner];
+            statusEl.textContent = `Победил игрок ${winner_nickname}!`;
           }
           setTimeout(() => {
-            ws.send(JSON.stringify({type: 'reset'}));
+            ws.send(JSON.stringify({ type: 'reset' }));
           }, 1000);
         } else {
-          statusEl.textContent = `Ваша роль: ${myRole}. Ход игрока: ${state.players[state.turn]}`
+          const playerX_nick = state.players['X'] || 'Игрок X';
+          const playerO_nick = state.players['O'] || 'Игрок O';
+          const currentPlayerNick = state.turn === 'X' ? playerX_nick : playerO_nick;
+          statusEl.innerHTML = `Ваша роль: <strong>${myRole}</strong>. Ход: <strong>${currentPlayerNick} (${state.turn})</strong>`;
         }
-        boardEl.innerHTML = ''
+
+        // Update score
+        const playerX_nick = state.players['X'] || 'Игрок X';
+        const playerO_nick = state.players['O'] || 'Игрок O';
+        scoreXEl.textContent = `${playerX_nick} ${state.score.X || 0}`;
+        scoreOEl.textContent = `${playerO_nick} ${state.score.O || 0}`;
+        scoreSeparatorEl.style.display = (state.players['X'] && state.players['O']) ? 'inline' : 'none';
+
+        // Update board
+        boardEl.innerHTML = '';
         state.board.forEach((row, rowIndex) => {
           row.forEach((cell, colIndex) => {
-            const cellButton = document.createElement('button')
-            cellButton.textContent = cell || ''
-            cellButton.disabled = cell || state.winner || state.turn !== myRole
-            cellButton.onclick = () => handleCellClick(rowIndex, colIndex)
-            boardEl.appendChild(cellButton)
-          })
-        })
+            const cellButton = document.createElement('button');
+            cellButton.textContent = cell || '';
+            
+            cellButton.classList.remove('x-marker', 'o-marker');
+            if (cell === 'X') {
+              cellButton.classList.add('x-marker');
+            } else if (cell === 'O') {
+              cellButton.classList.add('o-marker');
+            }
+
+            cellButton.disabled = cell || state.winner || state.turn !== myRole;
+            cellButton.onclick = () => handleCellClick(rowIndex, colIndex);
+            boardEl.appendChild(cellButton);
+          });
+        });
       }
-      
+
       function handleCellClick(row, col) {
         const message = {
           type: 'move',
           row: row,
-          col: col
-        }
-        ws.send(JSON.stringify(message))
+          col: col,
+        };
+        ws.send(JSON.stringify(message));
       }
       ws.onmessage = function (event) {
-        const data = JSON.parse(event.data)
-        console.log('Получено сообщения от сервера:', data)
-      
+        const data = JSON.parse(event.data);
+        console.log('Получено сообщения от сервера:', data);
+
         if (data.type === 'role') {
-          myRole = data.role
+          myRole = data.role;
         } else if (data.type === 'game_update') {
-          updateUI(data)
+          updateUI(data);
         } else if (data.type === 'player_left') {
-          // Второй игрок отключился
-          statusEl.textContent = 'Ваш оппонент отключился. Обновите страницу для новой игры.'
-          // Блокируем все ячейки
-          boardEl.querySelectorAll('button').forEach((button) => (button.disabled = true))
+          statusEl.textContent = 'Ваш оппонент отключился. Обновите страницу для новой игры.';
+          boardEl.querySelectorAll('button').forEach((button) => (button.disabled = true));
         }
-      }
-      
+      };
+
       ws.onopen = () => {
-        console.log('WebSocket соединение установленно.')
-        statusEl.textContent = 'Ожидание второго игрока...'
-      }
-      
+        console.log('WebSocket соединение установленно.');
+        statusEl.textContent = 'Ожидание второго игрока...';
+      };
+
       ws.onclose = () => {
-        console.log('WebSocket соединение закрыто.')
-        statusEl.textContent = 'Соединение потеряно. Обновите страницу.'
-      }
+        console.log('WebSocket соединение закрыто.');
+        statusEl.textContent = 'Соединение потеряно. Обновите страницу.';
+      };
     </script>
   </body>
 </html>
