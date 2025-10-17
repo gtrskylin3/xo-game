@@ -46,18 +46,19 @@ class ConnectionManager:
         if len(self.active_connections) >= 2:
             await websocket.send_text("Game is full")
             await websocket.close()
-            return
+            return False
         
         used_roles = self.active_connections.values()
         role =  'O' if 'X' in used_roles else 'X'
         self.active_connections[websocket] = role
         await websocket.send_json({'type': 'role', 'role': role})
+        return True
     
-    async def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket):
         del self.active_connections[websocket]
 
-    async def broadcast(self, message: str):      
+    async def broadcast(self, data: dict):      
         # Отправляем сообщение всем в словаре     
         for connection in self.active_connections:
-            await connection.send_text(message) 
+            await connection.send_json(data) 
 

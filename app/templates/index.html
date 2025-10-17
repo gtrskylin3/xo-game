@@ -1,31 +1,113 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var ws = new WebSocket("ws://localhost:8000/ws");
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
+  <head>
+    <title>x0 game.</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 90vh;
+      }
+      
+      #board {
+        display: grid;
+        /* Создаем 3 колонки, каждая занимает одинаковое пространство (1fr) */
+        grid-template-columns: repeat(3, 100px);
+        /* Создаем 3 ряда высотой 100px */
+        grid-template-rows: repeat(3, 100px);
+        gap: 5px; /* Пространство между кнопками */
+        margin-top: 20px;
+      }
+      
+      #board button {
+        font-size: 3em; /* Делаем 'X' и 'O' большими */
+        font-weight: bold;
+        cursor: pointer;
+      }
+      
+      #status {
+        font-size: 1.2em;
+        height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tic-Tac-Toe</h1>
+    <p id="status">Connection...</p>
+    <p id="score">Счет: playerX 0 | player0 0</p>
+    <div id="board"></div>
+    <script>
+      const statusEl = document.getElementById('status');
+      const boardEl = document.getElementById('board');
+      const scoreEl = document.getElementById('score');
+      
+      const ws = new WebSocket('ws://127.0.0.1:8000/ws');
+      
+      let myRole = null
+    
+      
+      function updateUI(state) {
+        if (state.winner) {
+          if (state.winner === 'draw') {
+            statusEl.textContent = 'Ничья'
+          } else {
+            statusEl.textContent = `Победил игрок ${state.winner}!`
+            scoreEl.textContent = `Счет: playerX ${state.score.X} | player0 ${state.score.O ? state.score.O: 0}`;
+          }
+          setTimeout(() => {
+            ws.send(JSON.stringify({type: 'reset'}));
+          }, 1000);
+        } else {
+          statusEl.textContent = `Ваша роль: ${myRole}. Ход игрока: ${state.turn}`
+        }
+        boardEl.innerHTML = ''
+        state.board.forEach((row, rowIndex) => {
+          row.forEach((cell, colIndex) => {
+            const cellButton = document.createElement('button')
+            cellButton.textContent = cell || ''
+            cellButton.disabled = cell || state.winner || state.turn !== myRole
+            cellButton.onclick = () => handleCellClick(rowIndex, colIndex)
+            boardEl.appendChild(cellButton)
+          })
+        })
+      }
+      
+      function handleCellClick(row, col) {
+        const message = {
+          type: 'move',
+          row: row,
+          col: col
+        }
+        ws.send(JSON.stringify(message))
+      }
+      ws.onmessage = function (event) {
+        const data = JSON.parse(event.data)
+        console.log('Получено сообщения от сервера:', data)
+      
+        if (data.type === 'role') {
+          myRole = data.role
+        } else if (data.type === 'game_update') {
+          updateUI(data)
+        } else if (data.type === 'player_left') {
+          // Второй игрок отключился
+          statusEl.textContent = 'Ваш оппонент отключился. Обновите страницу для новой игры.'
+          // Блокируем все ячейки
+          boardEl.querySelectorAll('button').forEach((button) => (button.disabled = true))
+        }
+      }
+      
+      ws.onopen = () => {
+        console.log('WebSocket соединение установленно.')
+        statusEl.textContent = 'Ожидание второго игрока...'
+      }
+      
+      ws.onclose = () => {
+        console.log('WebSocket соединение закрыто.')
+        statusEl.textContent = 'Соединение потеряно. Обновите страницу.'
+      }
+    </script>
+  </body>
 </html>

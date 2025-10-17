@@ -6,12 +6,12 @@ from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.connection_manager import ConnectionManager
-
+from app.game_manager import Game
 
 connection_manager = ConnectionManager()
 
 app = FastAPI()
-
+game = Game()
 
 
 
@@ -26,15 +26,26 @@ def html_response(request: Request):
 
 @app.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
-    await connection_manager.connect(websocket)
+    is_connected = await connection_manager.connect(websocket)
+    if not is_connected:
+        return
+    if len(connection_manager.active_connections) == 2:
+        game.__init__()
+        await connection_manager.broadcast(game.game_state('game_update'))
     try:
         while True:
-            data = await websocket.receive_text()
-            print(connection_manager.connections)
-            await connection_manager.broadcast(data)
+            data = await websocket.receive_json()
+            if data.get('type') == 'move':
+                player = connection_manager.active_connections[websocket]
+                success = game.make_move(data['row'], data['col'], player)
+                if success:
+                    await connection_manager.broadcast(game.game_state('game_update'))
+            elif data.get('type') == 'reset':
+                game.reset_game()
+                await connection_manager.broadcast(game.game_state('game_update'))
     except WebSocketDisconnect as e:
-        print(f'connection closed {e.code}')
-
+        connection_manager.disconnect(websocket)
+        await connection_manager.broadcast({'type': 'player_left'})
 
 if __name__ == "__main__":
     run('app.main:app', reload=True)
