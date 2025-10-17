@@ -14,38 +14,38 @@ app = FastAPI()
 game = Game()
 
 
+templates = Jinja2Templates(directory="app/templates")
 
-templates = Jinja2Templates(directory='app/templates')
 
-
-@app.get('/')
+@app.get("/")
 def html_response(request: Request):
-    return templates.TemplateResponse(name='index.html', request=request)
+    return templates.TemplateResponse(name="index.html", request=request)
 
 
-
-@app.websocket('/ws')
-async def websocket_endpoint(websocket: WebSocket):
-    is_connected = await connection_manager.connect(websocket)
+@app.websocket("/ws/{nickname}")
+async def websocket_endpoint(websocket: WebSocket, nickname: str):
+    is_connected = await connection_manager.connect(websocket, nickname)
     if not is_connected:
         return
     if len(connection_manager.active_connections) == 2:
         game.__init__()
-        await connection_manager.broadcast(game.game_state('game_update'))
+        players = connection_manager.get_players()
+        await connection_manager.broadcast(game.game_state("game_update", players))
     try:
         while True:
             data = await websocket.receive_json()
-            if data.get('type') == 'move':
+            if data.get("type") == "move":
                 player = connection_manager.active_connections[websocket]
-                success = game.make_move(data['row'], data['col'], player)
+                success = game.make_move(data["row"], data["col"], player["role"])
                 if success:
-                    await connection_manager.broadcast(game.game_state('game_update'))
-            elif data.get('type') == 'reset':
+                    await connection_manager.broadcast(game.game_state("game_update", connection_manager.get_players()))
+            elif data.get("type") == "reset":
                 game.reset_game()
-                await connection_manager.broadcast(game.game_state('game_update'))
+                await connection_manager.broadcast(game.game_state("game_update", connection_manager.get_players()))
     except WebSocketDisconnect as e:
         connection_manager.disconnect(websocket)
-        await connection_manager.broadcast({'type': 'player_left'})
+        await connection_manager.broadcast({"type": "player_left"})
+
 
 if __name__ == "__main__":
-    run('app.main:app', reload=True)
+    run("app.main:app", reload=True)

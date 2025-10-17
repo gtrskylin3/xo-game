@@ -44,24 +44,31 @@
       const boardEl = document.getElementById('board');
       const scoreEl = document.getElementById('score');
       
-      const ws = new WebSocket('ws://127.0.0.1:8000/ws');
+        let nickname = prompt("Пожалуйста, введите ваш никнейм:");
+        if (!nickname) {
+          nickname = "User" + Math.floor(Math.random() * 1000);
+        }
+      
+      const ws = new WebSocket(`ws://127.0.0.1:8000/ws/${nickname}`);
       
       let myRole = null
-    
       
       function updateUI(state) {
         if (state.winner) {
           if (state.winner === 'draw') {
             statusEl.textContent = 'Ничья'
           } else {
-            statusEl.textContent = `Победил игрок ${state.winner}!`
-            scoreEl.textContent = `Счет: playerX ${state.score.X} | player0 ${state.score.O ? state.score.O: 0}`;
+            const winner_nickname = state.players[state.winner]; 
+            statusEl.textContent = `Победил игрок ${winner_nickname}!`
+            const playerX_nick = state.players['X'] || 'Игрок X';
+            const playerO_nick = state.players['O'] || 'Игрок O';
+            scoreEl.textContent = `Счет: ${playerX_nick} ${state.score.X} | ${playerO_nick} ${state.score.O ? state.score.O: 0}`;
           }
           setTimeout(() => {
             ws.send(JSON.stringify({type: 'reset'}));
           }, 1000);
         } else {
-          statusEl.textContent = `Ваша роль: ${myRole}. Ход игрока: ${state.turn}`
+          statusEl.textContent = `Ваша роль: ${myRole}. Ход игрока: ${state.players[state.turn]}`
         }
         boardEl.innerHTML = ''
         state.board.forEach((row, rowIndex) => {

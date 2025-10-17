@@ -38,9 +38,9 @@ from fastapi import WebSocket
 
 class ConnectionManager:
     def __init__(self) -> None:
-        self.active_connections: Dict[WebSocket, Any[str]] = {}
+        self.active_connections: Dict[WebSocket, dict] = {}
     
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, nickname: str):
         await websocket.accept()
 
         if len(self.active_connections) >= 2:
@@ -48,12 +48,18 @@ class ConnectionManager:
             await websocket.close()
             return False
         
-        used_roles = self.active_connections.values()
+        used_roles = [player['role'] for player in self.active_connections.values()]
         role =  'O' if 'X' in used_roles else 'X'
-        self.active_connections[websocket] = role
+        self.active_connections[websocket] = {'role': role, 'nickname': nickname}
         await websocket.send_json({'type': 'role', 'role': role})
         return True
     
+    def get_players(self):
+        players = {}
+        for player_data in self.active_connections.values():
+            players[player_data['role']] = player_data['nickname']
+        return players
+
     def disconnect(self, websocket: WebSocket):
         del self.active_connections[websocket]
 

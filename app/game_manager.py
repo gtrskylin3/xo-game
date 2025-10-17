@@ -79,7 +79,7 @@ class Game:
         self.turn = 'O' if self.turn == 'X' else 'X'
         return True
     
-    def game_state(self, type=None):
+    def game_state(self, type=None, players=None):
         state = {
             'board': self.board,
             'turn': self.turn,
@@ -88,6 +88,8 @@ class Game:
         }
         if type:
             state['type'] = type
+        if players:
+            state['players'] = players
         return state
 
 
