@@ -47,5 +47,3 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str):
         await connection_manager.broadcast({"type": "player_left"})
 
 
-if __name__ == "__main__":
-    run("app.main:app", reload=True)
