@@ -48,8 +48,9 @@
         if (!nickname) {
           nickname = "User" + Math.floor(Math.random() * 1000);
         }
-      
-      const ws = new WebSocket(`ws://https://xo-game-kclt.onrender.com/ws/${nickname}`);
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const ws = new WebSocket(`${protocol}//${host}/ws/${nickname}`); 
       
       let myRole = null
       
