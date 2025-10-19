@@ -1,10 +1,8 @@
-from typing import List
 from fastapi import FastAPI
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from uvicorn import run
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 from app.connection_manager import ConnectionManager
 from app.game_manager import Game
 
@@ -38,12 +36,19 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str):
                 player = connection_manager.active_connections[websocket]
                 success = game.make_move(data["row"], data["col"], player["role"])
                 if success:
-                    await connection_manager.broadcast(game.game_state("game_update", connection_manager.get_players()))
+                    await connection_manager.broadcast(
+                        game.game_state("game_update", connection_manager.get_players())
+                    )
             elif data.get("type") == "reset":
                 game.reset_game()
-                await connection_manager.broadcast(game.game_state("game_update", connection_manager.get_players()))
-    except WebSocketDisconnect as e:
+                await connection_manager.broadcast(
+                    game.game_state("game_update", connection_manager.get_players())
+                )
+    except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
+        game.reset_game()
         await connection_manager.broadcast({"type": "player_left"})
 
 
+if __name__ == "__main__":
+    run("app.main:app", reload=True)

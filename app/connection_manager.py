@@ -1,70 +1,42 @@
-from collections import defaultdict
-import random
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Optional
+from uuid import uuid4
 
 from fastapi import WebSocket
 
-# {
-#     game1: [
-#         (WebSocket, role),
-#         (WebSocket, role)
-#     ]
-# }
-
-# class ConnectionManager:
-#     def __init__(self):
-#         self.lobby = {}
-#         self.lobby_id = 0
-#         self.used_role = ''
-    
-#     def init_lobby(self, lobby_id: int):
-#         self.lobby[lobby_id] = []
-
-#     def create_lobby(self, websocket: WebSocket):
-#         role = ['X', '0']
-#         current_lobby = self.lobby.get(self.lobby_id)
-#         if not current_lobby:
-#             self.init_lobby(self.lobby_id)
-#             self.lobby[self.lobby_id].append((websocket, 'X'))
-#             return
-#         if len(current_lobby) < 2:
-#             self.lobby[self.lobby_id].append((websocket, '0'))
-#         self.lobby_id += 1
-        
-
-#     async def connect(self, websocket: WebSocket):
-#         await websocket.accept()
-#         self.create_lobby(websocket)
-
 class ConnectionManager:
-    def __init__(self) -> None:
-        self.active_connections: Dict[WebSocket, dict] = {}
-    
-    async def connect(self, websocket: WebSocket, nickname: str):
+    def __init__(self):
+        self.lobbies: List[Dict[WebSocket, dict]] = []
+
+    async def connect(self, websocket: WebSocket, nickname):
         await websocket.accept()
 
-        if len(self.active_connections) >= 2:
-            await websocket.send_text("Game is full")
-            await websocket.close()
-            return False
-        
-        used_roles = [player['role'] for player in self.active_connections.values()]
-        role =  'O' if 'X' in used_roles else 'X'
-        self.active_connections[websocket] = {'role': role, 'nickname': nickname}
-        await websocket.send_json({'type': 'role', 'role': role})
-        return True
-    
-    def get_players(self):
-        players = {}
-        for player_data in self.active_connections.values():
-            players[player_data['role']] = player_data['nickname']
-        return players
+        for lobby in self.lobbies:
+            if len(lobby) == 1:
+                role = "O"
+                lobby.update({websocket: {"nickname": nickname, "role": role}})
+                await websocket.send_json({"type": "role", "role": role})
+                return
+        else:
+            self.lobbies.append({websocket: {"nickname": nickname, "role": "X"}})
+            await websocket.send_json({"type": "role", "role": "X"})
+
+    def _find_lobby_by_websocket(self, websocket: WebSocket) -> Dict:
+        for lobby in self.lobbies:
+            if websocket in lobby:
+                return lobby
+        return {}
 
     def disconnect(self, websocket: WebSocket):
-        del self.active_connections[websocket]
+        lobby = self._find_lobby_by_websocket(websocket)
+        if lobby:
+            del lobby[websocket]
+            if lobby is None:
+                del lobby
+            return True
+        return False
 
-    async def broadcast(self, data: dict):      
-        # Отправляем сообщение всем в словаре     
-        for connection in self.active_connections:
-            await connection.send_json(data) 
-
+    async def broadcast(self, websocket: WebSocket, data: dict):
+        lobby = self._find_lobby_by_websocket(websocket)
+        if lobby:
+            for player in lobby:
+                await player.send_json(data)
