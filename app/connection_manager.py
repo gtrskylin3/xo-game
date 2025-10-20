@@ -58,7 +58,7 @@ class ConnectionManager:
             await websocket.send_json({"type": "role", "role": role})
             return lobby_id
 
-    async def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket):
         lobby_id = self._get_lobby_id_by_websocket(websocket)
         if lobby_id and lobby_id in self.lobbies:
             lobby = self.lobbies[lobby_id]

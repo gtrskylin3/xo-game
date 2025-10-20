@@ -25,6 +25,7 @@ def html_response(request: Request):
 async def websocket_endpoint(websocket: WebSocket, nickname: str):
     lobby_id = await connection_manager.connect(websocket, nickname)
     players_in_lobby = connection_manager.get_players(lobby_id)
+    game_id = None
     if len(players_in_lobby) == 2:
         game_id = game.create_game(players_in_lobby)
         await connection_manager.broadcast(
@@ -58,9 +59,9 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str):
                 )
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
-        del game.games[game_id]
-        game.reset_game(game_id)
-        await connection_manager.broadcast(lobby_id, {"type": "player_left"})
+        if game_id and game_id in game.games:
+            del game.games[game_id]
+            await connection_manager.broadcast(lobby_id, {"type": "player_left"})
 
 
 if __name__ == "__main__":
