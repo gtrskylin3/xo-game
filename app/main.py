@@ -5,6 +5,7 @@ from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from app.connection_manager import ConnectionManager
 from app.game_manager import Game
+from pprint import pprint
 
 connection_manager = ConnectionManager()
 
@@ -22,32 +23,44 @@ def html_response(request: Request):
 
 @app.websocket("/ws/{nickname}")
 async def websocket_endpoint(websocket: WebSocket, nickname: str):
-    is_connected = await connection_manager.connect(websocket, nickname)
-    if not is_connected:
-        return
-    if len(connection_manager.active_connections) == 2:
-        game.__init__()
-        players = connection_manager.get_players()
-        await connection_manager.broadcast(game.game_state("game_update", players))
+    lobby_id = await connection_manager.connect(websocket, nickname)
+    players_in_lobby = connection_manager.get_players(lobby_id)
+    if len(players_in_lobby) == 2:
+        game_id = game.create_game(players_in_lobby)
+        await connection_manager.broadcast(
+            lobby_id=lobby_id,
+            data=game.game_state(game_id, "game_update"),
+        )
     try:
         while True:
             data = await websocket.receive_json()
             if data.get("type") == "move":
-                player = connection_manager.active_connections[websocket]
-                success = game.make_move(data["row"], data["col"], player["role"])
+                player = connection_manager.get_player_by_websocket(websocket)
+                # print(player)
+                game_id = game.get_game_by_nickname(player["nickname"])
+                pprint(game.games)
+                success = None
+                if player:
+                    success = game.make_move(data["row"], data["col"], player)
                 if success:
                     await connection_manager.broadcast(
-                        game.game_state("game_update", connection_manager.get_players())
+                        lobby_id=lobby_id,
+                        data= game.game_state(
+                            game_id=game_id,
+                            type="game_update",
+                        )
                     )
             elif data.get("type") == "reset":
-                game.reset_game()
+                game.reset_game(game_id)
                 await connection_manager.broadcast(
-                    game.game_state("game_update", connection_manager.get_players())
+                    lobby_id,
+                    game.game_state(game_id, "game_update")
                 )
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
-        game.reset_game()
-        await connection_manager.broadcast({"type": "player_left"})
+        del game.games[game_id]
+        game.reset_game(game_id)
+        await connection_manager.broadcast(lobby_id, {"type": "player_left"})
 
 
 if __name__ == "__main__":

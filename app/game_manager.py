@@ -1,7 +1,26 @@
+from typing import Dict
+from uuid import uuid4
 
-# Создать класс Game для хранения доски (3x3 матрица), текущего хода, проверки победы/ничьей.
-# Функции: инициализация доски, валидация хода, обновление доски, проверка на конец игры.
-# Цель: Улучшить навыки Python (работа с списками, алгоритмами проверки).
+
+# Структура игр
+# games = {
+#     game_id: {
+#         game_state: {
+#             'board': self.board,
+#             'turn': self.turn,
+#             'winner': self.winner,
+#             'score': self.score,
+#         }
+#     },
+#     game_id2: {
+#         game_state: {
+#             'board': self.board,
+#             'turn': self.turn,
+#             'winner': self.winner,
+#             'score': self.score,
+#         }
+#     },
+# }
 
 class Game:
 
@@ -17,44 +36,59 @@ class Game:
             'X': 0,
             'O': 0
         }
+        self.games : Dict[str, dict] = {}
+        
     
-    # def _check_win(self, player):
-    #     win_combo = ((0,1,2), (0,0,0), (1,1,1), (2,2,2), (2,1,0))
-    #     for combo in win_combo:
-    #         if self.board[0][combo[0]] == self.board[1][combo[1]] == self.board[2][combo[2]] == player:
-    #         # if self.board[0][combo[0]] == player and self.board[1][combo[1]] == player and self.board[2][combo[2]] == player:
-    #             return True
-            
-    #     for row in self.board:
-    #         if all(i == player for i in row):
-    #             return True
-    #     return False
+    def create_game(self, players):
+        game_id = str(uuid4())
+        self.games[game_id] = {
+            'board': self.board,
+            'turn': self.turn,
+            'winner': self.winner,
+            'score': self.score,
+            'players': players
+        }
+        return game_id
+        
 
-    def reset_game(self):
-        self.board = [
-            ["", "", ""],
-            ["", "", ""],
-            ["", "", ""],
-        ]
-        self.turn = 'X'
-        self.winner = None
-
-    def _check_win(self, player):
+    def reset_game(self, game_id):
+        game = self.games[game_id]
+        if game:
+            game["board"] = [
+                ["", "", ""],
+                ["", "", ""],
+                ["", "", ""],
+            ]
+            game['turn'] = 'X' 
+            game['winner'] = None
+    
+    def get_game_by_nickname(self, player):
+        for game_id, game_state in self.games.items():
+            players = game_state['players']
+            # print(players)
+            if players:
+                for nickname in players.values():
+                    if nickname == player:
+                        return game_id
+        
+        
+    def _check_win(self, player, game):
         # Проверка по горизонтали
+        board = game['board']
         for r in range(3):
-            if self.board[r][0] == self.board[r][1] == self.board[r][2] == player:
+            if board[r][0] == board[r][1] == board[r][2] == player:
                 return True
 
         # Проверка по вертикали
         for c in range(3):
-            if self.board[0][c] == self.board[1][c] == self.board[2][c] == player:
+            if board[0][c] == board[1][c] == board[2][c] == player:
                 return True
         
         # Проверка диагоналей
-        if self.board[0][0] == self.board[1][1] == self.board[2][2] == player:
+        if board[0][0] == board[1][1] == board[2][2] == player:
             return True
         
-        if self.board[0][2] == self.board[1][1] == self.board[2][0] == player:
+        if board[0][2] == board[1][1] == board[2][0] == player:
             return True
         
         return False
@@ -62,35 +96,42 @@ class Game:
 
 
     def make_move(self, row, col, player):
-        if self.winner:
-            return False
-        if player != self.turn:
-            return False
-        if self.board[row][col] != '':
+        game_id = self.get_game_by_nickname(player['nickname'])
+        
+        player = player['role']
+        print(player, game_id)
+        
+        if not game_id:
             return False
         
-        self.board[row][col] = player
-        if self._check_win(player):
-            self.winner = player
-            self.score[player] += 1
+        game = self.games.get(game_id)
+        
+        if not game:
+            return False
+        
+        if game['winner']:
+            return False
+            
+        if player != game['turn']:
+            return False
+        
+        if game['board'][row][col] != '':
+            return False
+        
+        game["board"][row][col] = player
+        if self._check_win(player, game):
+            game['winner']  = player
+            game['score'][player] += 1
 
-        elif all(self.board[r][c] != "" for r in range(3) for c in range(3)):
-            self.winner = "draw" # Ничья
-        self.turn = 'O' if self.turn == 'X' else 'X'
+        elif all(game['board'][r][c] != "" for r in range(3) for c in range(3)):
+            game['winner'] = "draw" # Ничья
+        game['turn'] = 'O' if game['turn'] == 'X' else 'X'
         return True
     
-    def game_state(self, type=None, players=None):
-        state = {
-            'board': self.board,
-            'turn': self.turn,
-            'winner': self.winner,
-            'score': self.score,
-        }
+    def game_state(self, game_id: str, type=None):
         if type:
-            state['type'] = type
-        if players:
-            state['players'] = players
-        return state
+            self.games[game_id]['type'] = type
+        return self.games[game_id]
 
 
 # game = Game()
