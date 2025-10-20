@@ -26,9 +26,25 @@ class ConnectionManager:
             if websocket in lobby:
                 return lobby_id
         return None
-
+    
+    def check_unique_nickname(self, nickname):
+        nicknames = []
+        for lobby_data in self.lobbies.values():
+            print(lobby_data.values())
+            for i in lobby_data.values():
+                nicknames.append(i['nickname'])
+        if nickname not in nicknames:
+            return True
+        return False
+        
     async def connect(self, websocket: WebSocket, nickname):
         await websocket.accept()
+       
+        if not self.check_unique_nickname(nickname):
+            await websocket.send_json({'error': 'nickname already use'})
+            await websocket.close()
+            return
+            
         for lobby_id, lobby in self.lobbies.items():
             if len(lobby) == 1:
                 role = "O"
@@ -42,7 +58,7 @@ class ConnectionManager:
             await websocket.send_json({"type": "role", "role": role})
             return lobby_id
 
-    def disconnect(self, websocket: WebSocket):
+    async def disconnect(self, websocket: WebSocket):
         lobby_id = self._get_lobby_id_by_websocket(websocket)
         if lobby_id and lobby_id in self.lobbies:
             lobby = self.lobbies[lobby_id]

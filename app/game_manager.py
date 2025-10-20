@@ -25,27 +25,23 @@ from uuid import uuid4
 class Game:
 
     def __init__(self):
-        self.board = [
-            ["", "", ""],
-            ["", "", ""],
-            ["", "", ""],
-        ]
-        self.turn = 'X'
-        self.winner = None
-        self.score = {
-            'X': 0,
-            'O': 0
-        }
         self.games : Dict[str, dict] = {}
         
     
     def create_game(self, players):
         game_id = str(uuid4())
         self.games[game_id] = {
-            'board': self.board,
-            'turn': self.turn,
-            'winner': self.winner,
-            'score': self.score,
+            'board': [
+                ["", "", ""],
+                ["", "", ""],
+                ["", "", ""],
+            ],
+            'turn': 'X',
+            'winner': None,
+            'score': {
+                'X': 0,
+                'O': 0
+            },
             'players': players
         }
         return game_id
