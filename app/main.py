@@ -4,13 +4,13 @@ from uvicorn import run
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from app.connection_manager import ConnectionManager
-from app.game_manager import Game
+from app.game_manager import Game, GameManager
 from pprint import pprint
 
 connection_manager = ConnectionManager()
 
 app = FastAPI()
-game = Game()
+game = GameManager()
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -24,6 +24,10 @@ def html_response(request: Request):
 @app.websocket("/ws/{nickname}")
 async def websocket_endpoint(websocket: WebSocket, nickname: str):
     lobby_id = await connection_manager.connect(websocket, nickname)
+    player = connection_manager.get_player_by_websocket(websocket)
+    if not lobby_id or not player:
+        return
+    pprint(game.games)
     players_in_lobby = connection_manager.get_players(lobby_id)
     game_id = None
     if len(players_in_lobby) == 2:
@@ -36,26 +40,26 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str):
         while True:
             data = await websocket.receive_json()
             if data.get("type") == "move":
-                player = connection_manager.get_player_by_websocket(websocket)
-                # print(player)
                 game_id = game.get_game_by_nickname(player["nickname"])
-                pprint(game.games)
+                if not game_id:
+                    return
                 success = None
                 if player:
                     success = game.make_move(data["row"], data["col"], player)
                 if success:
                     await connection_manager.broadcast(
                         lobby_id=lobby_id,
-                        data= game.game_state(
+                        data=game.game_state(
                             game_id=game_id,
                             type="game_update",
-                        )
+                        ),
                     )
             elif data.get("type") == "reset":
+                if not game_id:
+                    return
                 game.reset_game(game_id)
                 await connection_manager.broadcast(
-                    lobby_id,
-                    game.game_state(game_id, "game_update")
+                    lobby_id, game.game_state(game_id, "game_update")
                 )
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
